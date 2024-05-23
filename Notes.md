@@ -11,13 +11,17 @@ So after the aboce command, the prisma will create a migration.sql and it will c
 ---------------------------------------------------
 
 ### 23 May 2023 : 
-
+- [x] created a postgress docker container and with the following command, 
+  ----->>>>   docker run --detach --env POSTGRES_USER=tinesh-postgresql-docker --env POSTGRES_PASSWORD=dummy --env POSTGRES_DB=ThumbnailFinderDataLabellingSolanaBlockchain --name postgres --publish 5432:5432 postgres:latestargument_1
+  
+- [x] connected to it in the cli with the command 
+  ----->>>>   docker exec -it postgres psql -U tinesh-postgresql-docker -d ThumbnailFinderDataLabellingSolanaBlockchain
+  
 - [X] I have create a endpoint to login with the wallet address and get a token for the future login
 
 - [X] Created an endpoint to get the presigned url from the aws
 
-- [X] Tested that presigned url in the postman by specifying all the details
-(This takened a lot of time)
+- [X] (This takened a lot of time) Tested that presigned url in the postman by specifying all the details
 
 - [] Need to do UI for the third point in the next session
 

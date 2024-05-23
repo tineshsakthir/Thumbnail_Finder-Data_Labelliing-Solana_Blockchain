@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRESQL_DATABASE_URL_LOCAL")
+}
+
+
+model User {
+  id            Int               @id @default(autoincrement())
+  address       String            @unique
+  tasks         Task[]
+}
+
+model Task {
+  id            Int                @id @default(autoincrement())
+  title         String             @default("Select the most clickable thumbnail")
+  userId Int 
+  user User @relation(fields: [userId], references: [id])
+  signature String
+  amount String
+  options Options[]
+  submissions Submission[]
+}
+
+
+model Options {
+  id Int @id @default(autoincrement())
+  image_url String 
+  option_id Int   
+  task_id Int
+  task Task @relation(fields: [task_id], references: [id])
+  submissions Submission[]
+}
+
+
+// Found the one-one relation ship code from the "https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/one-to-one-relations"
+model Worker {
+  id Int @id @default(autoincrement()) 
+  address String @unique
+  submissions Submission[]
+  balance Balance?
+}
+
+
+model Balance {
+  id Int @id @default(autoincrement())
+  worker_id Int @unique
+  worker Worker @relation(fields: [worker_id], references: [id])
+  pending_amount Int
+  locked_amount Int
+}
+
+model Submission {
+  id  Int @id @default(autoincrement())
+  worker_id Int
+  worker Worker @relation(fields: [worker_id], references: [id])
+  option_id Int
+  option Options @relation(fields: [option_id], references: [id])
+  task_id Int
+  task Task @relation(fields: [task_id], references: [id])
+  amount String
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// model SubmissionCache {
+//   id Int @id @default(autoincrement())
+//   task_Id Int
+//   option1 Int
+//   option2 Int
+//   option3 Int
+//   option4 Int
+//   option5 Int
+//   option6 Int
+//   option7 Int
+//   option8 Int
+// }

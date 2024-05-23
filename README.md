@@ -4,3 +4,8 @@ This project has two modules
 2. Image labelling for training AI models
 
 It is also implementing solana blockchain(Phantom wallet's api is used) for making payments to the workers. 
+
+
+
+
+

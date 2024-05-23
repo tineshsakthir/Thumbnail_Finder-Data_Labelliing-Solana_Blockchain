@@ -12,12 +12,14 @@ So after the aboce command, the prisma will create a migration.sql and it will c
 
 ### 23 May 2023 : 
 
-[X] I have create a endpoint to login with the wallet address and get a token for the future login
+- [X] I have create a endpoint to login with the wallet address and get a token for the future login
 
-[X] Created an endpoint to get the presigned url from the aws.
+- [X] Created an endpoint to get the presigned url from the aws
 
-[X] Tested that presigned url in the postman by specifying all the details
+- [X] Tested that presigned url in the postman by specifying all the details
 (This takened a lot of time)
+
+- [] Need to do UI for the third point in the next session
 
 Things to remember in the above : 
 

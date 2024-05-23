@@ -11,12 +11,26 @@ import dotenv from "dotenv";
 dotenv.config() ; 
 const JWT_SECRET = process.env.JWT_SECRET ;
 
+const bucketName = process.env.BUCKET_NAME; // Getting bucket name from environment variables
+const bucketRegion = process.env.BUCKET_REGION; // Getting bucket region from environment variables
+const accessKey = process.env.ACCESS_KEY; // Getting AWS access key from environment variables
+const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret access key from environment variables
+
 
 import {S3Client} from '@aws-sdk/client-s3'
-
 import {createPresignedPost} from '@aws-sdk/s3-presigned-post'
 
-// const s3Client
+// create s3Client here,
+
+// @ts-ignore
+const s3Client = new S3Client({
+    credentials: {
+      // Providing AWS credentials
+      accessKeyId: accessKey,
+      secretAccessKey: secretAccessKey,
+    },
+    region: bucketRegion, // Setting AWS region
+  });
 
 router.post('/signin',async (req,res)=>{
     // Task : add sing verification logic here with the actual wallet 
@@ -50,8 +64,29 @@ router.post('/signin',async (req,res)=>{
 })
 
 router.get('/presignedUrl' ,authMiddleware , async (req,res)=>{
-
+    // @ts-ignore
+    const userId = req.userId ;
+    const { url, fields } = await createPresignedPost(s3Client, {
+        // @ts-ignore
+        Bucket: bucketName,
+        // @ts-ignore
+         
+        Key:`thumnail_picker_data_labeller_solana_blockchain/${userId}/${Math.random()}/image.jpg`,
+        Conditions: [
+          ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+        ],
+        Fields: {
+          'Content-Type': 'image/png'
+        },
+        Expires: 3600
+      })
+      
+      console.log({ url, fields })
+      res.json({url,fields})
 })
 
 
-export default router ; 
+
+
+
+export default router ;

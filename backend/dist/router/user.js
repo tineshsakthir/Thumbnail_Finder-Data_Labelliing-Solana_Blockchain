@@ -27,6 +27,7 @@ const accessKey = process.env.ACCESS_KEY; // Getting AWS access key from environ
 const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret access key from environment variables
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_presigned_post_1 = require("@aws-sdk/s3-presigned-post");
+const types_1 = require("../types");
 // create s3Client here,
 // @ts-ignore
 const s3Client = new client_s3_1.S3Client({
@@ -37,6 +38,105 @@ const s3Client = new client_s3_1.S3Client({
     },
     region: bucketRegion, // Setting AWS region
 });
+router.get('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    // @ts-ignore
+    const userId = req.userId;
+    const taskId = (_a = req.query.taskId) !== null && _a !== void 0 ? _a : "1";
+    const task = yield prismaClient.task.findUnique({
+        where: {
+            userId: Number(userId),
+            id: Number(taskId)
+        }
+    });
+    if (!task) {
+        return res.json({
+            "message": "You don't have access to this task"
+        });
+    }
+    const result = {};
+    // Here , just initializing all the options with 0 as their chosen count
+    const options = yield prismaClient.options.findMany({
+        where: {
+            task_id: Number(taskId),
+        }
+    });
+    options.forEach(option => {
+        result[option.id] = {
+            count: 0,
+            image_url: option.image_url
+        };
+    });
+    // Updating the result with the actual chosen count
+    const submissions = yield prismaClient.submission.findMany({
+        where: {
+            task_id: Number(taskId),
+        },
+        select: {
+            option_id: true
+        }
+    });
+    submissions.forEach(submission => {
+        result[submission.option_id].count++;
+    });
+    res.json({ result, taskId: taskId });
+}));
+router.post('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // @ts-ignore
+    const userId = req.userId;
+    const parsed = types_1.createTaskInput.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(411).json({
+            message: "Invalid body format for options and signature"
+        });
+    }
+    const response = yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const response = yield tx.task.create({
+            data: {
+                title: parsed.data.title,
+                //Now hard coded, but in the future it should be taken from the signature
+                amount: "1",
+                signature: parsed.data.signature,
+                userId: Number.parseInt(userId)
+            }
+        });
+        console.log(response);
+        yield tx.options.createMany({
+            data: parsed.data.options.map(option => {
+                return {
+                    image_url: option.imageUrl,
+                    task_id: response.id
+                };
+            })
+        });
+        return response;
+    }));
+    return res.json({
+        id: response.id
+    });
+}));
+router.get('/presignedUrl', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // @ts-ignore
+    const userId = req.userId;
+    const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
+        // @ts-ignore
+        Bucket: bucketName,
+        // @ts-ignore
+        Key: `thumnail_picker_data_labeller_solana_blockchain/${userId}/${Math.random()}/image.jpg`,
+        Conditions: [
+            ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
+        ],
+        Fields: {
+            'Content-Type': 'image/png'
+        },
+        Expires: 3600
+    });
+    // These fields are headers while posting the image from the client to the aws s3 bucket,
+    // All the headers are need to be in the correct order
+    // The image should be referred by the name "file" only
+    console.log({ url, fields });
+    res.json({ url, fields });
+}));
 router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Task : add sing verification logic here with the actual wallet 
     const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9";
@@ -60,24 +160,5 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
     res.json({
         token
     });
-}));
-router.get('/presignedUrl', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // @ts-ignore
-    const userId = req.userId;
-    const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
-        // @ts-ignore
-        Bucket: bucketName,
-        // @ts-ignore
-        Key: `thumnail_picker_data_labeller_solana_blockchain/${userId}/${Math.random()}/image.jpg`,
-        Conditions: [
-            ['content-length-range', 0, 5 * 1024 * 1024] // 5 MB max
-        ],
-        Fields: {
-            'Content-Type': 'image/png'
-        },
-        Expires: 3600
-    });
-    console.log({ url, fields });
-    res.json({ url, fields });
 }));
 exports.default = router;

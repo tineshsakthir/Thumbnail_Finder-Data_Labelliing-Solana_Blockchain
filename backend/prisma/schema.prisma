@@ -35,7 +35,6 @@ model Task {
 model Options {
   id Int @id @default(autoincrement())
   image_url String 
-  option_id Int   
   task_id Int
   task Task @relation(fields: [task_id], references: [id])
   submissions Submission[]
@@ -50,7 +49,6 @@ model Worker {
   balance Balance?
 }
 
-
 model Balance {
   id Int @id @default(autoincrement())
   worker_id Int @unique
@@ -60,7 +58,7 @@ model Balance {
 }
 
 model Submission {
-  id  Int @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   worker_id Int
   worker Worker @relation(fields: [worker_id], references: [id])
   option_id Int
@@ -75,23 +73,31 @@ model Submission {
 
 
 
-
-
-
-
-
-
-
-
-// model SubmissionCache {
+// model SubmissionForDataLabelling {
 //   id Int @id @default(autoincrement())
-//   task_Id Int
-//   option1 Int
-//   option2 Int
-//   option3 Int
-//   option4 Int
-//   option5 Int
-//   option6 Int
-//   option7 Int
-//   option8 Int
+//   worker_id Int
+//   worker Worker @relation(fields: [worker_id], references: [id])
+//   option_id Int
+//   option Options @relation(fields: [option_id], references: [id])
+//   task_id Int
+//   task Task @relation(fields: [task_id], references: [id])
+//   amount String
 // }
+
+
+// I think the below two caching models are just overhead, because the system is WIrte Heavy, so it causes over head to store them separately for each submission
+//But i am doing the cache just to do...
+
+model DataLabelSubmissionCache {
+  id Int @id @default(autoincrement())
+  task_id Int @unique
+  submittedImagesUrl String[]
+}
+
+model ThumbnailSubmissionCache {
+  id Int @id @default(autoincrement())
+  task_id Int @unique
+  thumbnailChoosenCount Json
+}
+
+

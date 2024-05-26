@@ -4,6 +4,8 @@ import workerRouter from './router/worker' ;
 
 const app = express() ; 
 
+app.use(express.json())
+
 app.use('/v1/user', userRouter) ; 
 app.use('/v1/worker', workerRouter) ; 
 

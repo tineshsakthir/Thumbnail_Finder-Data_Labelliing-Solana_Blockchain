@@ -20,14 +20,14 @@ const client_1 = require("@prisma/client");
 const prismaClient = new client_1.PrismaClient();
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const JWT_SECRET = process.env.JWT_SECRET;
+const USER_JWT_SECRET = process.env.USER_JWT_SECRET;
 const bucketName = process.env.BUCKET_NAME; // Getting bucket name from environment variables
 const bucketRegion = process.env.BUCKET_REGION; // Getting bucket region from environment variables
 const accessKey = process.env.ACCESS_KEY; // Getting AWS access key from environment variables
 const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret access key from environment variables
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_presigned_post_1 = require("@aws-sdk/s3-presigned-post");
-const types_1 = require("../types");
+const types_1 = require("../types/types");
 // create s3Client here,
 // @ts-ignore
 const s3Client = new client_s3_1.S3Client({
@@ -38,9 +38,9 @@ const s3Client = new client_s3_1.S3Client({
     },
     region: bucketRegion, // Setting AWS region
 });
-router.get('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    // @ts-ignore
+    // No error due to the types/espress.d.ts configuration
     const userId = req.userId;
     const taskId = (_a = req.query.taskId) !== null && _a !== void 0 ? _a : "1";
     const task = yield prismaClient.task.findUnique({
@@ -81,7 +81,7 @@ router.get('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0,
     });
     res.json({ result, taskId: taskId });
 }));
-router.post('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // @ts-ignore
     const userId = req.userId;
     const parsed = types_1.createTaskInput.safeParse(req.body);
@@ -91,13 +91,18 @@ router.post('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0
         });
     }
     const response = yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        var _b;
         const response = yield tx.task.create({
             data: {
-                title: parsed.data.title,
+                title: (_b = parsed.data.title) !== null && _b !== void 0 ? _b : "",
                 //Now hard coded, but in the future it should be taken from the signature
                 amount: "1",
                 signature: parsed.data.signature,
-                userId: Number.parseInt(userId)
+                userId: Number.parseInt(userId),
+                // Todo : here i am hard coding the number of target workers, but this should be changed as below 
+                //        1. The target worker count should not be got from the user, it should be got from the 
+                target_worker_count: 4,
+                remaining_workers: 4
             }
         });
         console.log(response);
@@ -115,7 +120,7 @@ router.post('/task', middleware_1.authMiddleware, (req, res) => __awaiter(void 0
         id: response.id
     });
 }));
-router.get('/presignedUrl', middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/presignedUrl', middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // @ts-ignore
     const userId = req.userId;
     const { url, fields } = yield (0, s3_presigned_post_1.createPresignedPost)(s3Client, {
@@ -156,7 +161,7 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
     const token = jsonwebtoken_1.default.sign({
         userId: user.id
         // @ts-ignore
-    }, JWT_SECRET);
+    }, USER_JWT_SECRET);
     res.json({
         token
     });

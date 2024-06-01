@@ -20,57 +20,57 @@ model User {
   tasks         Task[]
 }
 
+
 model Task {
-  id            Int                @id @default(autoincrement())
-  title         String             @default("Select the most clickable thumbnail")
-  userId Int 
-  user User @relation(fields: [userId], references: [id])
-  signature String
-  amount String
-  options Options[]
-  submissions Submission[]
+  id                Int         @id @default(autoincrement())
+  title             String      @default("Select the most clickable thumbnail")
+  userId            Int
+  user              User        @relation(fields: [userId], references: [id])
+  signature         String
+  target_worker_count Int        
+  remaining_workers  Int         
+  amount            String
+  options           Options[]
+  submissions       Submission[]
 }
 
 
 model Options {
-  id Int @id @default(autoincrement())
-  image_url String 
-  task_id Int
-  task Task @relation(fields: [task_id], references: [id])
-  submissions Submission[]
+  id            Int           @id @default(autoincrement())
+  image_url     String 
+  task_id       Int
+  task          Task           @relation(fields: [task_id], references: [id])
+  submissions   Submission[]
 }
 
 
 // Found the one-one relation ship code from the "https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/one-to-one-relations"
 model Worker {
-  id Int @id @default(autoincrement()) 
-  address String @unique
-  submissions Submission[]
-  balance Balance?
+  id            Int             @id @default(autoincrement()) 
+  address       String          @unique
+  submissions   Submission[]
+  balance       Balance?
 }
 
 model Balance {
-  id Int @id @default(autoincrement())
-  worker_id Int @unique
-  worker Worker @relation(fields: [worker_id], references: [id])
-  pending_amount Int
-  locked_amount Int
+  id                Int             @id @default(autoincrement())
+  worker_id         Int             @unique  // @ unique make this one - to - one relationship
+  worker            Worker          @relation(fields: [worker_id], references: [id])
+  pending_amount    Int
+  locked_amount     Int
 }
+
 
 model Submission {
-  id Int @id @default(autoincrement())
-  worker_id Int
-  worker Worker @relation(fields: [worker_id], references: [id])
-  option_id Int
-  option Options @relation(fields: [option_id], references: [id])
-  task_id Int
-  task Task @relation(fields: [task_id], references: [id])
-  amount String
+  id                Int             @id @default(autoincrement())
+  worker_id         Int
+  worker            Worker          @relation(fields: [worker_id], references: [id])
+  option_id         Int
+  option            Options         @relation(fields: [option_id], references: [id])
+  task_id           Int
+  task              Task            @relation(fields: [task_id], references: [id])
+  amount            String
 }
-
-
-
-
 
 
 // model SubmissionForDataLabelling {
@@ -89,15 +89,15 @@ model Submission {
 //But i am doing the cache just to do...
 
 model DataLabelSubmissionCache {
-  id Int @id @default(autoincrement())
-  task_id Int @unique
-  submittedImagesUrl String[]
+  id                      Int          @id @default(autoincrement())
+  task_id                 Int          @unique
+  submitted_images_url      String[]
 }
 
 model ThumbnailSubmissionCache {
-  id Int @id @default(autoincrement())
-  task_id Int @unique
-  thumbnailChoosenCount Json
+  id                      Int          @id @default(autoincrement())
+  task_id                 Int          @unique
+  thumbnail_choosen_count   Json
 }
 
 

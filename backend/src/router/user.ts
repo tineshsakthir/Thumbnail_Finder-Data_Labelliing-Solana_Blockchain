@@ -2,14 +2,18 @@ import { Router } from "express";
 const router = Router();
 
 import jwt from "jsonwebtoken";
-import { authMiddleware } from "../middleware";
+import { userAuthMiddleware } from "../middleware";
 
 import { PrismaClient } from "@prisma/client";
 const prismaClient = new PrismaClient();
+
+
+
 import dotenv from "dotenv";
 
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET;
+const USER_JWT_SECRET = process.env.USER_JWT_SECRET ; 
+
 
 const bucketName = process.env.BUCKET_NAME; // Getting bucket name from environment variables
 const bucketRegion = process.env.BUCKET_REGION; // Getting bucket region from environment variables
@@ -19,7 +23,7 @@ const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret acc
 
 import { S3Client } from '@aws-sdk/client-s3'
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
-import { createTaskInput } from "../types";
+import { createTaskInput } from "../types/types";
 
 // create s3Client here,
 
@@ -34,8 +38,8 @@ const s3Client = new S3Client({
 });
 
 
-router.get('/task', authMiddleware, async (req, res) => {
-  // @ts-ignore
+router.get('/task', userAuthMiddleware, async (req, res) => {
+  // No error due to the types/espress.d.ts configuration
   const userId = req.userId;
   const taskId = req.query.taskId?? "1";
 
@@ -96,8 +100,13 @@ const result : Record< number | string , { count: number, image_url: string }> =
 
 
 
-router.post('/task', authMiddleware, async (req, res) => {
+router.post('/task', userAuthMiddleware, async (req, res) => {
+
+
+
+
   // @ts-ignore
+
   const userId: string = req.userId;
   const parsed = createTaskInput.safeParse(req.body);
 
@@ -110,14 +119,17 @@ router.post('/task', authMiddleware, async (req, res) => {
   const response = await prismaClient.$transaction(async tx => {
     const response = await tx.task.create({
       data: {
-        title: parsed.data.title,
+        title: parsed.data.title?? "",
         //Now hard coded, but in the future it should be taken from the signature
         amount: "1",
         signature: parsed.data.signature,
-        userId: Number.parseInt(userId)
+        userId: Number.parseInt(userId),
+        // Todo : here i am hard coding the number of target workers, but this should be changed as below 
+        //        1. The target worker count should not be got from the user, it should be got from the 
+        target_worker_count : 4,
+        remaining_workers : 4
       }
     })
-
     console.log(response);
 
     await tx.options.createMany({
@@ -130,15 +142,13 @@ router.post('/task', authMiddleware, async (req, res) => {
     })
 
     return response;
-
   })
-
   return res.json({
     id: response.id
   })
 })
 
-router.get('/presignedUrl', authMiddleware, async (req, res) => {
+router.get('/presignedUrl', userAuthMiddleware, async (req, res) => {
   // @ts-ignore
   const userId = req.userId;
   const { url, fields } = await createPresignedPost(s3Client, {
@@ -184,7 +194,7 @@ router.post('/signin', async (req, res) => {
   const token = jwt.sign({
     userId: user.id
     // @ts-ignore
-  }, JWT_SECRET);
+  }, USER_JWT_SECRET);
 
   res.json({
     token

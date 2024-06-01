@@ -48,3 +48,27 @@ Things to remember in the above :
 ----------------------------------------------------------
 
 
+
+
+### 1 June 2023 : 
+
+
+-->> Main work on this day is automating the postman with Run Collection option 
+          a) Made the postman to execute multiple request continuously and use the response data of the one request(GET /presignedUrl) to the header of an another request(POST /to amazon s3 bucket url) 
+          b) Retesting the user work flow with the automated process
+
+          Todo : (Only finished half part in automating, half part of automation is balance)
+
+          a) Need to automate the process of informing the task information to the backend after uploading multiple images(as needed by the user) to the s3 bucket 
+          b) Refer chatgpt for the Test and Pre-Test script files on postman
+              refer link : [all info about automating postman on multiple requests](https://chatgpt.com/share/673ab476-09c9-4792-a0fc-0aae32b09b30)
+
+
+
+-->> Added to worker endpoints(signIn and nextTask)
+
+          Todo
+
+          a) Need to deal with new task schema
+          b) Check whether the particular task has reached its worker count
+          c

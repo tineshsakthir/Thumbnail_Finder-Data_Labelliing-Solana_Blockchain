@@ -7,6 +7,7 @@ exports.createTaskInput = void 0;
 const zod_1 = __importDefault(require("zod"));
 const createTaskInput = zod_1.default.object({
     options: zod_1.default.array(zod_1.default.object({
+        option_number: zod_1.default.number(),
         imageUrl: zod_1.default.string()
     })),
     signature: zod_1.default.string(), // amount should be taken from the signature, so it is not send from the client while posting the task

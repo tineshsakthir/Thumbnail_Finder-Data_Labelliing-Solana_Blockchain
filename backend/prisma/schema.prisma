@@ -37,6 +37,7 @@ model Task {
 
 model Options {
   id            Int           @id @default(autoincrement())
+  option_number Int
   image_url     String 
   task_id       Int
   task          Task           @relation(fields: [task_id], references: [id])

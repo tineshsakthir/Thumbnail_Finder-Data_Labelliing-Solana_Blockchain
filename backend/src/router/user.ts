@@ -108,9 +108,14 @@ router.post('/task', userAuthMiddleware, async (req, res) => {
   // @ts-ignore
 
   const userId: string = req.userId;
+
+  console.log("At request Body \n\n")
+  console.log(req.body) ; 
+
   const parsed = createTaskInput.safeParse(req.body);
 
   if (!parsed.success) {
+    console.log("Invalid body format for options and signature") ; 
     return res.status(411).json({
       message: "Invalid body format for options and signature"
     })
@@ -135,11 +140,13 @@ router.post('/task', userAuthMiddleware, async (req, res) => {
     await tx.options.createMany({
       data: parsed.data.options.map(option => {
         return {
+          option_number : option.option_number ,
           image_url: option.imageUrl,
           task_id: response.id
         }
       })
     })
+
 
     return response;
   })

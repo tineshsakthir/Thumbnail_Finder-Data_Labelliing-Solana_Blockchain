@@ -84,8 +84,11 @@ router.get('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(voi
 router.post('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // @ts-ignore
     const userId = req.userId;
+    console.log("At request Body \n\n");
+    console.log(req.body);
     const parsed = types_1.createTaskInput.safeParse(req.body);
     if (!parsed.success) {
+        console.log("Invalid body format for options and signature");
         return res.status(411).json({
             message: "Invalid body format for options and signature"
         });
@@ -109,6 +112,7 @@ router.post('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(vo
         yield tx.options.createMany({
             data: parsed.data.options.map(option => {
                 return {
+                    option_number: option.option_number,
                     image_url: option.imageUrl,
                     task_id: response.id
                 };

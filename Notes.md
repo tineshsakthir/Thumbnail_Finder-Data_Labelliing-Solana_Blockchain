@@ -90,7 +90,7 @@ and say the task info to the backend(make this flow)
             [doc available in the project folder] -->> Refer Doc to remember the workflow
 ![alt text](image.png)
 
-2. Changed the sheama of the Option model to hold option_id 
+2. Changed the sheama of the Option model to hold option_number for selecting a particular options and showing it in the frontend easily 
 
 
 

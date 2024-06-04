@@ -10,7 +10,7 @@ tinesh@Thor:~/Desktop/github/Thumbnail_Finder-Data_Labelliing-Solana_Blockchain/
 So after the aboce command, the prisma will create a migration.sql and it will create the tables in the specified database 
 ---------------------------------------------------
 
-### 23 May 2023 : 
+### 23 May 2024 : 
 - [x] created a postgress docker container and with the following command, 
   ----->>>>   docker run --detach --env POSTGRES_USER=tinesh-postgresql-docker --env POSTGRES_PASSWORD=dummy --env POSTGRES_DB=ThumbnailFinderDataLabellingSolanaBlockchain --name postgres --publish 5432:5432 postgres:latestargument_1
   
@@ -50,7 +50,7 @@ Things to remember in the above :
 
 
 
-### 1 June 2023 : 
+### 1 June 2024 : 
 
 
 -->> Main work on this day is automating the postman with Run Collection option 
@@ -65,10 +65,33 @@ Things to remember in the above :
 
 
 
--->> Added to worker endpoints(signIn and nextTask)
+-->> Added two worker endpoints(signIn and nextTask)
 
           Todo
 
           a) Need to deal with new task schema
           b) Check whether the particular task has reached its worker count
           c
+
+
+          Automate the backend saying process 
+
+But only after running (gett presigned urls+post objects ) multiple times and setting theier key into the environmental varialbles or something like that to store the image name(key in post object request)
+
+and say the task info to the backend(make this flow)
+
+
+----------------------------------------------------------------------------------------------------------
+
+
+### June 4 2024 :
+
+1 . Fully automated the postman workflow 
+            [doc available in the project folder] -->> Refer Doc to remember the workflow
+![alt text](image.png)
+
+2. Changed the sheama of the Option model to hold option_id 
+
+
+
+---------------------------------------------------------------------------------------------------------------

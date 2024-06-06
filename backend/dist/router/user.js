@@ -28,6 +28,7 @@ const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret acc
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_presigned_post_1 = require("@aws-sdk/s3-presigned-post");
 const types_1 = require("../types/types");
+const config_1 = require("../config");
 // create s3Client here,
 // @ts-ignore
 const s3Client = new client_s3_1.S3Client({
@@ -88,7 +89,7 @@ router.post('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(vo
     console.log(req.body);
     const parsed = types_1.createTaskInput.safeParse(req.body);
     if (!parsed.success) {
-        console.log("Invalid body format for options and signature");
+        console.log("Invalid body format for options and signatures");
         return res.status(411).json({
             message: "Invalid body format for options and signature"
         });
@@ -99,7 +100,7 @@ router.post('/task', middleware_1.userAuthMiddleware, (req, res) => __awaiter(vo
             data: {
                 title: (_b = parsed.data.title) !== null && _b !== void 0 ? _b : "",
                 //Now hard coded, but in the future it should be taken from the signature
-                amount: "1",
+                amount: 1 * config_1.TOTAL_DECIMAL,
                 signature: parsed.data.signature,
                 userId: Number.parseInt(userId),
                 // Todo : here i am hard coding the number of target workers, but this should be changed as below 
@@ -147,19 +148,26 @@ router.get('/presignedUrl', middleware_1.userAuthMiddleware, (req, res) => __awa
     res.json({ url, fields });
 }));
 router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // Task : add sing verification logic here with the actual wallet 
+    // Task : add signIn verification logic here with the actual wallet 
     const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9";
+    const parsedData = types_1.createSignInInput.safeParse(req.body);
+    if (!parsedData.success) {
+        return res.status(400).json({
+            status: "failure",
+            message: "Invalid request body format for sign In as a user"
+        });
+    }
     const user = yield prismaClient.user.upsert({
         create: {
             // ... data to create a User
-            address: hardCodedWalletAddress,
+            address: parsedData.data.walletAddress,
         },
         update: {
         // ... in case it already exists, update
         },
         where: {
             // ... the filter for the User we want to update
-            address: hardCodedWalletAddress,
+            address: parsedData.data.walletAddress,
         }
     });
     const token = jsonwebtoken_1.default.sign({

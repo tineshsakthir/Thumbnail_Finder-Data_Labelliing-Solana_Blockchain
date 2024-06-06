@@ -13,66 +13,78 @@ datasource db {
   url      = env("POSTGRESQL_DATABASE_URL_LOCAL")
 }
 
-
 model User {
-  id            Int               @id @default(autoincrement())
-  address       String            @unique
-  tasks         Task[]
+  id      Int    @id @default(autoincrement())
+  address String @unique
+  tasks   Task[]
 }
-
 
 model Task {
-  id                Int         @id @default(autoincrement())
-  title             String      @default("Select the most clickable thumbnail")
-  userId            Int
-  user              User        @relation(fields: [userId], references: [id])
-  signature         String
-  target_worker_count Int        
-  remaining_workers  Int         
-  amount            String
-  options           Options[]
-  submissions       Submission[]
+  id                  Int          @id @default(autoincrement())
+  title               String       @default("Select the most clickable thumbnail")
+  userId              Int
+  user                User         @relation(fields: [userId], references: [id])
+  signature           String
+  target_worker_count Int
+  remaining_workers   Int
+  amount              Int
+  options             Options[]
+  submissions         Submission[]
 }
-
 
 model Options {
-  id            Int           @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   option_number Int
-  image_url     String 
+  image_url     String
   task_id       Int
-  task          Task           @relation(fields: [task_id], references: [id])
+  task          Task         @relation(fields: [task_id], references: [id])
   submissions   Submission[]
 }
-
 
 // Found the one-one relation ship code from the "https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/one-to-one-relations"
 model Worker {
-  id            Int             @id @default(autoincrement()) 
-  address       String          @unique
-  submissions   Submission[]
-  balance       Balance?
+  id          Int          @id @default(autoincrement())
+  address     String       @unique
+  submissions Submission[]
+  balance     Balance?
+  Payouts     Payouts[]
 }
 
 model Balance {
-  id                Int             @id @default(autoincrement())
-  worker_id         Int             @unique  // @ unique make this one - to - one relationship
-  worker            Worker          @relation(fields: [worker_id], references: [id])
-  pending_amount    Int
-  locked_amount     Int
+  id             Int    @id @default(autoincrement())
+  worker_id      Int    @unique // @ unique make this one - to - one relationship
+  worker         Worker @relation(fields: [worker_id], references: [id])
+  pending_amount Int
+  locked_amount  Int
 }
-
 
 model Submission {
-  id                Int             @id @default(autoincrement())
-  worker_id         Int
-  worker            Worker          @relation(fields: [worker_id], references: [id])
-  option_id         Int
-  option            Options         @relation(fields: [option_id], references: [id])
-  task_id           Int
-  task              Task            @relation(fields: [task_id], references: [id])
-  amount            String
+  id        Int     @id @default(autoincrement())
+  worker_id Int
+  worker    Worker  @relation(fields: [worker_id], references: [id])
+  option_id Int
+  option    Options @relation(fields: [option_id], references: [id])
+  task_id   Int
+  task      Task    @relation(fields: [task_id], references: [id])
+  amount    Int
+
+  @@unique([worker_id, task_id]) // This restricts the worker from submitting the same task more than one time..........
 }
 
+model Payouts {
+  id        Int    @id @default(autoincrement())
+  worker_id Int
+  worker    Worker @relation(fields: [worker_id], references: [id])
+  amount    Int
+  signature String
+  status    TxnStatus
+}
+
+enum TxnStatus {
+  Processing
+  Success
+  Failure
+}
 
 // model SubmissionForDataLabelling {
 //   id Int @id @default(autoincrement())
@@ -85,20 +97,17 @@ model Submission {
 //   amount String
 // }
 
-
 // I think the below two caching models are just overhead, because the system is WIrte Heavy, so it causes over head to store them separately for each submission
 //But i am doing the cache just to do...
 
 model DataLabelSubmissionCache {
-  id                      Int          @id @default(autoincrement())
-  task_id                 Int          @unique
-  submitted_images_url      String[]
+  id                   Int      @id @default(autoincrement())
+  task_id              Int      @unique
+  submitted_images_url String[]
 }
 
 model ThumbnailSubmissionCache {
-  id                      Int          @id @default(autoincrement())
-  task_id                 Int          @unique
-  thumbnail_choosen_count   Json
+  id                      Int  @id @default(autoincrement())
+  task_id                 Int  @unique
+  thumbnail_choosen_count Json
 }
-
-

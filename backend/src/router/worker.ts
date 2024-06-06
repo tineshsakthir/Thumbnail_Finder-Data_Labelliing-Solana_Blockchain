@@ -7,100 +7,187 @@ const router = Router();
 import dotenv from "dotenv";
 import { workerAuthMiddleware } from "../middleware";
 
+import { createSignInInput, createSumbmissionInput } from "../types/types";
+
 dotenv.config();
-const WORKER_JWT_SECRET = process.env.WORKER_JWT_SECRET;
+const WORKER_JWT_SECRET = process.env.WORKER_JWT_SECRET ;
 
-router.get('/nextTask', workerAuthMiddleware, async (req: Request, res: Response) => {
-  // No error due to the types/espress.d.ts configuration
-    const workerId = req.workerId;
-    const task = await prismaClient.$transaction(async tx => {
-        const tasksDoneByWorker =await tx.submission.findMany({
-            select: {
-                task_id: true
-            },
-            where: {
-                worker_id: workerId
-            }
+import { getNextTask, getWorkerBalance, signInWorker, submitTask } from "../controller/workerController";
+
+router.get('/payout', workerAuthMiddleware, async (req,res) => {
+
+    const workerId = req.workerId ;
+
+    /**
+     * Todo : 
+     * 1. Create a transaction signature using web3.js
+     * 1. make changes in the db (worker balance(pending to locked), log in payouts )
+     * 2. Send that transaction over the blockchain
+     * 
+     * 
+     * #important
+     * 
+     * 1. need to lock the table while doing payouts, because the worker can bambard the table and can get more than one payouts for the single amount
+     * 
+     * So need to learn to lock the table, and need to lock the table at this place itself, i think prisma can't do this, need to do this with the raw sql queries.....
+     */
+
+
+    // 1
+    const hardCodedTrancSign = "hardcoded Transaction Signature" ; 
+
+    const worker = await prismaClient.worker.findFirst({
+        where : {
+            id : workerId 
+        }
+    })
+
+    if(!worker){
+        return res.status(400).json({
+            message : "WOrker not exists" , 
+            file : "worker.ts/payouts" 
         })
+    }
 
-        console.log("TasksDoneByWorker : ", tasksDoneByWorker) ;
+    
+    // 2
+    const payout = await prismaClient.$transaction(async (tx)=>{
 
-        const taskIdsDoneByWorker = tasksDoneByWorker.map(task => task.task_id)
-
-        const taskToWorker = await tx.task.findFirst({
+        const balance = await tx.balance.findFirst({
             where : {
-                id : {
-                   notIn : taskIdsDoneByWorker
-                }
-            }
+                worker_id : worker.id
+             }
         })
 
-        console.log("TaskIdsDoneByWorker : ", taskIdsDoneByWorker) ;
-
-
-        if(!taskToWorker){
-            return res.json({
-                taskFetch : "failure", 
-                message : "No task available at the movement. Come back later bro!!!"
+        if(!balance){
+            return res.status(400).json({
+                message : "balance not exists" , 
+                file : "worker.ts/payouts" 
             })
         }
 
-        // Todo : Not just check whether the task in not already done by the current user, but also check whether the task has been completed its working limit for the given money by the user
-        // Because showing the thumbnail to the extra workers will casue loss to the company money
-
-        const options = await tx.options.findMany({
+        if(balance.pending_amount == 0){
+            return res.status(400).json({
+                message : "you don't have any many to pull off" , 
+                file : "worker.ts/payouts" 
+            })
+        }
+        
+        await tx.balance.update({
             where : {
-                task_id : taskToWorker.id 
+                worker_id : worker.id
+            },
+            data : {
+                pending_amount : 0, 
+                locked_amount : balance.pending_amount
             }
         })
 
-        console.log("Options : ", options) ;
-
-        return {
-            taskFetch : "success", 
-            title : taskToWorker.title , 
-            options , 
-        }
+        const payout = await tx.payouts.create({
+            data : {
+                worker_id : worker.id ,
+                amount : balance.pending_amount , 
+                status : "Processing" , 
+                signature : hardCodedTrancSign
+            }
+        })
+        return payout ; 
     })
+
     
-    return res.json(task) ; 
+    // Now send the transaction ove the blockchiain , evev if it fails then no problem 
+    // , we will eventually check that and with the help pf the worker threads and we will retake the amount to the administrator account
+    
+    return res.status(200).json({
+        payout 
+    })
 
 
 })
 
-router.post('/signin', async (req: Request, res: Response) => {
-    // Task : add sing verification logic here with the actual wallet 
-    const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9worker";
 
-    const returnedWorker = await prismaClient.$transaction(async tx => {
-        const worker = await tx.worker.upsert({
-            create: {
-                // ... data to create a Worker
-                address: hardCodedWalletAddress,
-            },
-            update: {
-                // ... in case it already exists, update
-            },
-            where: {
-                // ... the filter for the Worker we want to update
-                address: hardCodedWalletAddress,
-            }
-        });
 
-        const balance = await tx.balance.upsert({
-            create: {
-                worker_id: worker.id,
-                locked_amount: 0,
-                pending_amount: 0
-            }, update: {
+router.get('/balance' , workerAuthMiddleware , async (req,res) => {
+    const workerId = req.workerId ; 
 
-            }, where: {
-                worker_id: worker.id
-            }
+    // if(!workerId) {
+    //     return res.json({
+    //         file : "worker.ts",
+    //         message : "Worker not comming here does not exist" 
+    //     })
+    // }
+
+    const balance = await getWorkerBalance(Number(workerId)) ; 
+    if(!balance){
+        return res.json({
+            file : "worker.ts",
+            message : "Balance does not exist" 
         })
-        return worker;
+    }
+    res.json(balance) ; 
+
+})
+
+
+router.post('/submission' , workerAuthMiddleware,  async (req,res) => {
+    
+    const workerId = req.workerId ; 
+
+    const parsed = createSumbmissionInput.safeParse(req.body) ; 
+
+    if (!parsed.success) {
+        console.log("Invalid body format for options and signatures") ; 
+        return res.status(411).json({
+          message: "Invalid body format for options and signature"
+        })
+      }
+
+    const currentTaskOfWorker = await getNextTask(Number(workerId)) ;
+
+    if(currentTaskOfWorker.taskId != parsed.data.taskId){
+        return res.status(200).json({
+            submissionStatus : "failed" , 
+            message : "This is not the Task which you are supposed to submit"
+        })
+    }
+
+    const submission = await submitTask(currentTaskOfWorker, parsed, Number(workerId) ) ; 
+
+    if(!submission){
+        return res.status(200).json({
+            submissionStatus : "failed" , 
+            message : "Such task does not found in the db"
+        })
+    }
+    return res.status(200).json({
+        submissionStatus : "success" , 
+        submission
     })
 
+})
+
+router.get('/nextTask', workerAuthMiddleware, async (req: Request, res: Response) => {
+  // No error due to the types/espress.d.ts configuration
+    const workerId = req.workerId;
+    const task = await getNextTask(Number(workerId))  ;
+    return res.json(task) ; 
+})
+
+router.post('/signin', async (req: Request, res: Response) => {
+    // Task : add sing verification logic here with the actual wallet  : Done
+    // const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9worker";
+
+
+
+    const parsedData = createSignInInput.safeParse(req.body);
+    if(!parsedData.success) {
+        return res.status(400).json({
+          status : "failure" , 
+          message  : "Invalid request body format for sign In as a worker"
+        })
+      }
+
+    const returnedWorker = await signInWorker(parsedData.data.walletAddress) ; 
 
     const token = jwt.sign({
         workerId: returnedWorker.id

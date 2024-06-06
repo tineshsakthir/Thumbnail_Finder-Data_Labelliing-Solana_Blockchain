@@ -19,80 +19,144 @@ const prismaClient = new client_1.PrismaClient();
 const router = (0, express_1.Router)();
 const dotenv_1 = __importDefault(require("dotenv"));
 const middleware_1 = require("../middleware");
+const types_1 = require("../types/types");
 dotenv_1.default.config();
 const WORKER_JWT_SECRET = process.env.WORKER_JWT_SECRET;
-router.get('/nextTask', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // No error due to the types/espress.d.ts configuration
+const workerController_1 = require("../controller/workerController");
+router.get('/payout', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const workerId = req.workerId;
-    const task = yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
-        const tasksDoneByWorker = yield tx.submission.findMany({
-            select: {
-                task_id: true
-            },
-            where: {
-                worker_id: workerId
-            }
-        });
-        console.log("TasksDoneByWorker : ", tasksDoneByWorker);
-        const taskIdsDoneByWorker = tasksDoneByWorker.map(task => task.task_id);
-        const taskToWorker = yield tx.task.findFirst({
-            where: {
-                id: {
-                    notIn: taskIdsDoneByWorker
-                }
-            }
-        });
-        console.log("TaskIdsDoneByWorker : ", taskIdsDoneByWorker);
-        if (!taskToWorker) {
-            return res.json({
-                taskFetch: "failure",
-                message: "No task available at the movement. Come back later bro!!!"
-            });
+    /**
+     * Todo :
+     * 1. Create a transaction signature using web3.js
+     * 1. make changes in the db (worker balance(pending to locked), log in payouts )
+     * 2. Send that transaction over the blockchain
+     *
+     *
+     * #important
+     *
+     * 1. need to lock the table while doing payouts, because the worker can bambard the table and can get more than one payouts for the single amount
+     *
+     * So need to learn to lock the table, and need to lock the table at this place itself, i think prisma can't do this, need to do this with the raw sql queries.....
+     */
+    // 1
+    const hardCodedTrancSign = "hardcoded Transaction Signature";
+    const worker = yield prismaClient.worker.findFirst({
+        where: {
+            id: workerId
         }
-        // Todo : Not just check whether the task in not already done by the current user, but also check whether the task has been completed its working limit for the given money by the user
-        // Because showing the thumbnail to the extra workers will casue loss to the company money
-        const options = yield tx.options.findMany({
-            where: {
-                task_id: taskToWorker.id
-            }
+    });
+    if (!worker) {
+        return res.status(400).json({
+            message: "WOrker not exists",
+            file: "worker.ts/payouts"
         });
-        console.log("Options : ", options);
-        return {
-            taskFetch: "success",
-            title: taskToWorker.title,
-            options,
-        };
-    }));
-    return res.json(task);
-}));
-router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // Task : add sing verification logic here with the actual wallet 
-    const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9worker";
-    const returnedWorker = yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
-        const worker = yield tx.worker.upsert({
-            create: {
-                // ... data to create a Worker
-                address: hardCodedWalletAddress,
-            },
-            update: {
-            // ... in case it already exists, update
-            },
+    }
+    // 2
+    const payout = yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const balance = yield tx.balance.findFirst({
             where: {
-                // ... the filter for the Worker we want to update
-                address: hardCodedWalletAddress,
-            }
-        });
-        const balance = yield tx.balance.upsert({
-            create: {
-                worker_id: worker.id,
-                locked_amount: 0,
-                pending_amount: 0
-            }, update: {}, where: {
                 worker_id: worker.id
             }
         });
-        return worker;
+        if (!balance) {
+            return res.status(400).json({
+                message: "balance not exists",
+                file: "worker.ts/payouts"
+            });
+        }
+        if (balance.pending_amount == 0) {
+            return res.status(400).json({
+                message: "you don't have any many to pull off",
+                file: "worker.ts/payouts"
+            });
+        }
+        yield tx.balance.update({
+            where: {
+                worker_id: worker.id
+            },
+            data: {
+                pending_amount: 0,
+                locked_amount: balance.pending_amount
+            }
+        });
+        const payout = yield tx.payouts.create({
+            data: {
+                worker_id: worker.id,
+                amount: balance.pending_amount,
+                status: "Processing",
+                signature: hardCodedTrancSign
+            }
+        });
+        return payout;
     }));
+    // Now send the transaction ove the blockchiain , evev if it fails then no problem 
+    // , we will eventually check that and with the help pf the worker threads and we will retake the amount to the administrator account
+    return res.status(200).json({
+        payout
+    });
+}));
+router.get('/balance', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const workerId = req.workerId;
+    // if(!workerId) {
+    //     return res.json({
+    //         file : "worker.ts",
+    //         message : "Worker not comming here does not exist" 
+    //     })
+    // }
+    const balance = yield (0, workerController_1.getWorkerBalance)(Number(workerId));
+    if (!balance) {
+        return res.json({
+            file: "worker.ts",
+            message: "Balance does not exist"
+        });
+    }
+    res.json(balance);
+}));
+router.post('/submission', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const workerId = req.workerId;
+    const parsed = types_1.createSumbmissionInput.safeParse(req.body);
+    if (!parsed.success) {
+        console.log("Invalid body format for options and signatures");
+        return res.status(411).json({
+            message: "Invalid body format for options and signature"
+        });
+    }
+    const currentTaskOfWorker = yield (0, workerController_1.getNextTask)(Number(workerId));
+    if (currentTaskOfWorker.taskId != parsed.data.taskId) {
+        return res.status(200).json({
+            submissionStatus: "failed",
+            message: "This is not the Task which you are supposed to submit"
+        });
+    }
+    const submission = yield (0, workerController_1.submitTask)(currentTaskOfWorker, parsed, Number(workerId));
+    if (!submission) {
+        return res.status(200).json({
+            submissionStatus: "failed",
+            message: "Such task does not found in the db"
+        });
+    }
+    return res.status(200).json({
+        submissionStatus: "success",
+        submission
+    });
+}));
+router.get('/nextTask', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // No error due to the types/espress.d.ts configuration
+    const workerId = req.workerId;
+    const task = yield (0, workerController_1.getNextTask)(Number(workerId));
+    return res.json(task);
+}));
+router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // Task : add sing verification logic here with the actual wallet  : Done
+    // const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9worker";
+    const parsedData = types_1.createSignInInput.safeParse(req.body);
+    if (!parsedData.success) {
+        return res.status(400).json({
+            status: "failure",
+            message: "Invalid request body format for sign In as a worker"
+        });
+    }
+    const returnedWorker = yield (0, workerController_1.signInWorker)(parsedData.data.walletAddress);
     const token = jsonwebtoken_1.default.sign({
         workerId: returnedWorker.id
         // @ts-ignore

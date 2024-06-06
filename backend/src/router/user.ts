@@ -23,7 +23,8 @@ const secretAccessKey = process.env.SECRET_ACCESS_KEY; // Getting AWS secret acc
 
 import { S3Client } from '@aws-sdk/client-s3'
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
-import { createTaskInput } from "../types/types";
+import { createSignInInput, createTaskInput } from "../types/types";
+import { TOTAL_DECIMAL } from "../config";
 
 // create s3Client here,
 
@@ -103,8 +104,6 @@ const result : Record< number | string , { count: number, image_url: string }> =
 router.post('/task', userAuthMiddleware, async (req, res) => {
 
 
-
-
   // @ts-ignore
 
   const userId: string = req.userId;
@@ -115,7 +114,7 @@ router.post('/task', userAuthMiddleware, async (req, res) => {
   const parsed = createTaskInput.safeParse(req.body);
 
   if (!parsed.success) {
-    console.log("Invalid body format for options and signature") ; 
+    console.log("Invalid body format for options and signatures") ; 
     return res.status(411).json({
       message: "Invalid body format for options and signature"
     })
@@ -126,7 +125,7 @@ router.post('/task', userAuthMiddleware, async (req, res) => {
       data: {
         title: parsed.data.title?? "",
         //Now hard coded, but in the future it should be taken from the signature
-        amount: "1",
+        amount: 1 * TOTAL_DECIMAL,
         signature: parsed.data.signature,
         userId: Number.parseInt(userId),
         // Todo : here i am hard coding the number of target workers, but this should be changed as below 
@@ -179,21 +178,35 @@ router.get('/presignedUrl', userAuthMiddleware, async (req, res) => {
   res.json({ url, fields })
 })
 
+
+
+
 router.post('/signin', async (req, res) => {
-  // Task : add sing verification logic here with the actual wallet 
+  // Task : add signIn verification logic here with the actual wallet 
   const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9";
+
+
+  const parsedData = createSignInInput.safeParse(req.body);
+
+  if(!parsedData.success) {
+    return res.status(400).json({
+      status : "failure" , 
+      message  : "Invalid request body format for sign In as a user"
+    })
+  }
+
 
   const user = await prismaClient.user.upsert({
     create: {
       // ... data to create a User
-      address: hardCodedWalletAddress,
+      address: parsedData.data.walletAddress ,
     },
     update: {
       // ... in case it already exists, update
     },
     where: {
       // ... the filter for the User we want to update
-      address: hardCodedWalletAddress,
+      address: parsedData.data.walletAddress ,
     }
   });
 

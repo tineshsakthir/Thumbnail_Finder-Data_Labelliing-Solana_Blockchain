@@ -10,16 +10,12 @@ export const getPresignedUrl = async (access_token: string) => {
     return response.data
 }
 
-
-
 export const submitTask = async (access_token: string, files : (File | null)[] , title : string) => {
-
 
     const options : {
         option_number : number ,
         imageUrl : string
     }[] = [];
-    
     
     for(let index = 0 ; index < files.length ; index++){
 

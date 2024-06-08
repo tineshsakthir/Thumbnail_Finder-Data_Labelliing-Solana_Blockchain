@@ -95,3 +95,21 @@ and say the task info to the backend(make this flow)
 
 
 ---------------------------------------------------------------------------------------------------------------
+
+
+
+### June 8 2024 :
+
+
+## Things done : 
+1. Made the frontend for creating a new task.
+2. Made some cors configuration on the bucket to allow all the origin to upload thigns on it........
+          info on cors config : [stack overflow link about the cons config on aws s3 bucket](https://stackoverflow.com/questions/47689489/cors-presigned-url-s3)
+
+## Things need to done : 
+
+1. Worker frontend .
+2. User task info viewing frontend . 
+3. Implement websocket to the User task info viewing frontenc . 
+4. apply client chaching task viewing panel[Redis]
+

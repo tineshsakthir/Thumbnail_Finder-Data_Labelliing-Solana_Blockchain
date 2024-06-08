@@ -69,6 +69,7 @@ const getNextTask = (workerId) => __awaiter(void 0, void 0, void 0, function* ()
             taskFetch: "success",
             title: taskToWorker.title,
             taskId: taskToWorker.id,
+            remainingWorker: taskToWorker.remaining_workers,
             options,
         };
     }));

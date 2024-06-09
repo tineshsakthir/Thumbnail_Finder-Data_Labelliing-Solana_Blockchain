@@ -13,6 +13,7 @@ dotenv.config();
 const WORKER_JWT_SECRET = process.env.WORKER_JWT_SECRET ;
 
 import { getNextTask, getWorkerBalance, signInWorker, submitTask } from "../controller/workerController";
+import { TOTAL_DECIMAL } from "../config";
 
 router.get('/payout', workerAuthMiddleware, async (req,res) => {
 
@@ -78,7 +79,7 @@ router.get('/payout', workerAuthMiddleware, async (req,res) => {
                 worker_id : worker.id
             },
             data : {
-                pending_amount : 0, 
+                pending_amount : 0*TOTAL_DECIMAL, 
                 locked_amount : balance.pending_amount
             }
         })

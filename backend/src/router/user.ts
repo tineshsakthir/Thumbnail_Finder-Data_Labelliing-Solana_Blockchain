@@ -179,8 +179,6 @@ router.get('/presignedUrl', userAuthMiddleware, async (req, res) => {
 })
 
 
-
-
 router.post('/signin', async (req, res) => {
   // Task : add signIn verification logic here with the actual wallet 
   const hardCodedWalletAddress = "0x1f136fD6e434dC12Eeb71A8c195cde45B5E448F9";

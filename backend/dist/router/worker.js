@@ -23,6 +23,7 @@ const types_1 = require("../types/types");
 dotenv_1.default.config();
 const WORKER_JWT_SECRET = process.env.WORKER_JWT_SECRET;
 const workerController_1 = require("../controller/workerController");
+const config_1 = require("../config");
 router.get('/payout', middleware_1.workerAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const workerId = req.workerId;
     /**
@@ -75,7 +76,7 @@ router.get('/payout', middleware_1.workerAuthMiddleware, (req, res) => __awaiter
                 worker_id: worker.id
             },
             data: {
-                pending_amount: 0,
+                pending_amount: 0 * config_1.TOTAL_DECIMAL,
                 locked_amount: balance.pending_amount
             }
         });
